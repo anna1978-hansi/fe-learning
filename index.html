@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>前端学习笔记</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --text: #16202a;
+        --muted: #637081;
+        --border: #d9e0ea;
+        --accent: #0057d8;
+        --accent-soft: #e8f0ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 10% -20%, #d7e8ff 5%, transparent 35%),
+          radial-gradient(circle at 120% 110%, #e5fff7 10%, transparent 40%),
+          var(--bg);
+      }
+
+      .app {
+        min-height: 100vh;
+        padding: 16px;
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 320px 1fr;
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .head {
+        padding: 14px 14px 8px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .meta {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .search {
+        width: 100%;
+        margin-top: 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 9px 10px;
+        font-size: 14px;
+      }
+
+      .search:focus {
+        outline: 2px solid var(--accent-soft);
+        border-color: var(--accent);
+      }
+
+      .tree {
+        padding: 8px;
+        overflow: auto;
+        max-height: calc(100vh - 220px);
+      }
+
+      .tree ul {
+        list-style: none;
+        margin: 0;
+        padding-left: 16px;
+      }
+
+      .tree li {
+        margin: 3px 0;
+      }
+
+      .folder {
+        color: #1f4b8f;
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      .file-button {
+        width: 100%;
+        text-align: left;
+        padding: 6px 8px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+        color: #223041;
+        font-size: 13px;
+      }
+
+      .file-button:hover {
+        background: #eff4fc;
+      }
+
+      .file-button.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 600;
+      }
+
+      .viewer {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .viewer-top {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .viewer-path {
+        font-size: 13px;
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .copy-btn {
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 8px;
+        padding: 7px 10px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .copy-btn:hover {
+        background: #f6f9ff;
+      }
+
+      pre {
+        margin: 0;
+        padding: 14px;
+        font-family: "JetBrains Mono", "Fira Code", "Menlo", monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        overflow: auto;
+        white-space: pre;
+        max-height: calc(100vh - 90px);
+      }
+
+      code {
+        color: #092132;
+      }
+
+      .empty {
+        padding: 20px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      @media (max-width: 960px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .tree {
+          max-height: 240px;
+        }
+
+        pre {
+          max-height: none;
+          min-height: 55vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="card sidebar">
+        <div class="head">
+          <h1>前端学习笔记</h1>
+          <div class="meta" id="meta">正在加载...</div>
+          <input class="search" id="search" placeholder="搜索文件名..." />
+        </div>
+        <div class="tree" id="tree"></div>
+      </section>
+      <section class="card viewer">
+        <div class="viewer-top">
+          <div class="viewer-path" id="currentPath">请选择左侧文件</div>
+          <button class="copy-btn" id="copyBtn" disabled>复制代码</button>
+        </div>
+        <pre><code id="content">加载中...</code></pre>
+      </section>
+    </main>
+    <script>
+      const state = {
+        files: [],
+        filtered: [],
+        activePath: "",
+        activeText: "",
+      };
+
+      const treeEl = document.getElementById("tree");
+      const contentEl = document.getElementById("content");
+      const currentPathEl = document.getElementById("currentPath");
+      const metaEl = document.getElementById("meta");
+      const searchEl = document.getElementById("search");
+      const copyBtn = document.getElementById("copyBtn");
+
+      function escapeHtml(text) {
+        return text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function makeTree(paths) {
+        const root = {};
+        for (const fullPath of paths) {
+          const parts = fullPath.split("/");
+          let node = root;
+          for (let i = 0; i < parts.length; i += 1) {
+            const part = parts[i];
+            const isLast = i === parts.length - 1;
+            if (isLast) {
+              if (!node.__files) node.__files = [];
+              node.__files.push(fullPath);
+            } else {
+              if (!node[part]) node[part] = {};
+              node = node[part];
+            }
+          }
+        }
+        return root;
+      }
+
+      function renderNode(node) {
+        const ul = document.createElement("ul");
+        const keys = Object.keys(node)
+          .filter((k) => k !== "__files")
+          .sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+
+        for (const dirName of keys) {
+          const li = document.createElement("li");
+          const folder = document.createElement("div");
+          folder.className = "folder";
+          folder.textContent = "📁 " + dirName;
+          li.appendChild(folder);
+          li.appendChild(renderNode(node[dirName]));
+          ul.appendChild(li);
+        }
+
+        const files = [...(node.__files || [])].sort((a, b) =>
+          a.localeCompare(b, "zh-Hans-CN")
+        );
+        for (const filePath of files) {
+          const li = document.createElement("li");
+          const btn = document.createElement("button");
+          btn.className = "file-button";
+          btn.dataset.path = filePath;
+          btn.textContent = "📝 " + filePath.split("/").slice(-1)[0];
+          if (filePath === state.activePath) btn.classList.add("active");
+          btn.onclick = () => openFile(filePath);
+          li.appendChild(btn);
+          ul.appendChild(li);
+        }
+        return ul;
+      }
+
+      async function openFile(filePath) {
+        try {
+          const url = encodeURI(filePath);
+          const res = await fetch(url);
+          if (!res.ok) throw new Error("读取失败");
+          const text = await res.text();
+
+          state.activePath = filePath;
+          state.activeText = text;
+          currentPathEl.textContent = filePath;
+          contentEl.innerHTML = escapeHtml(text);
+          copyBtn.disabled = false;
+          renderTree();
+        } catch (error) {
+          contentEl.textContent = `读取失败: ${error.message}`;
+        }
+      }
+
+      function renderTree() {
+        if (!state.filtered.length) {
+          treeEl.innerHTML = '<div class="empty">没有匹配的文件</div>';
+          return;
+        }
+        const treeData = makeTree(state.filtered);
+        treeEl.innerHTML = "";
+        treeEl.appendChild(renderNode(treeData));
+      }
+
+      function applyFilter() {
+        const keyword = searchEl.value.trim().toLowerCase();
+        state.filtered = state.files.filter((f) =>
+          f.toLowerCase().includes(keyword)
+        );
+        renderTree();
+      }
+
+      copyBtn.addEventListener("click", async () => {
+        if (!state.activeText) return;
+        await navigator.clipboard.writeText(state.activeText);
+        copyBtn.textContent = "已复制";
+        setTimeout(() => {
+          copyBtn.textContent = "复制代码";
+        }, 1000);
+      });
+
+      searchEl.addEventListener("input", applyFilter);
+
+      async function init() {
+        try {
+          const res = await fetch("manifest.json");
+          if (!res.ok) throw new Error("缺少 manifest.json");
+          const data = await res.json();
+
+          state.files = data.files || [];
+          state.filtered = [...state.files];
+          metaEl.textContent = `${data.contentRoot || ""} · 共 ${data.fileCount || 0} 个文件`;
+          renderTree();
+
+          if (state.files[0]) openFile(state.files[0]);
+          else contentEl.textContent = "没有可展示的文件，请先生成 manifest.json";
+        } catch (error) {
+          metaEl.textContent = "加载失败";
+          treeEl.innerHTML = '<div class="empty">请先执行生成命令：node scripts/generate-manifest.mjs</div>';
+          contentEl.textContent = `初始化失败: ${error.message}`;
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>
+
