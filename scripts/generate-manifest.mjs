@@ -69,7 +69,6 @@ async function main() {
   files.sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
 
   const payload = {
-    generatedAt: new Date().toISOString(),
     contentRoot: normalizeToPosix(contentRoot),
     fileCount: files.length,
     files,
@@ -88,4 +87,3 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
-

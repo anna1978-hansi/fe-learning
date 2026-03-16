@@ -58,14 +58,12 @@ git remote add origin git@github.com:<你的用户名>/fe-learning-notes.git
 
 ---
 
-## 4. 开启 GitHub Pages
+## 4. 开启 GitHub Pages（GitHub Actions 模式）
 
 1. 打开仓库页面 -> `Settings`  
 2. 左侧点击 `Pages`  
 3. `Build and deployment` 里选择：
-   - `Source`: `Deploy from a branch`
-   - `Branch`: `main`
-   - `Folder`: `/ (root)`
+   - `Source`: `GitHub Actions`
 4. 保存后等待 1-3 分钟
 
 最后会得到网址：
@@ -85,7 +83,9 @@ git commit -m "update notes"
 git push
 ```
 
-推送后 GitHub Pages 会自动更新。
+推送后会触发 `.github/workflows/deploy.yml`：  
+- 先生成并校验 `manifest.json` 是否是最新  
+- 再自动部署到 GitHub Pages
 
 ---
 
@@ -93,17 +93,17 @@ git push
 
 - 页面提示缺少 `manifest.json`：先执行 `node scripts/generate-manifest.mjs`，并提交推送。  
 - 新文件看不到：通常是忘了重新生成 `manifest.json`。  
-- 打开是 404：检查 `Pages` 的分支是否是 `main` + `/ (root)`。  
+- 打开是 404：检查 `Pages` 的 `Source` 是否是 `GitHub Actions`。  
 - 中文路径打不开：本项目前端已做 URL 编码处理，通常可正常显示。
 
 ---
 
 ## 7. 推送后如何确认部署成功（推荐按顺序排查）
 
-1. 打开仓库的 `Settings -> Pages`，确认 Source 是 `Deploy from a branch`，分支是 `main`，目录是 `/ (root)`。  
-Why: 这是 GitHub Pages 的发布入口，选错分支/目录就不会发布你现在的代码。
+1. 打开仓库的 `Settings -> Pages`，确认 Source 是 `GitHub Actions`。  
+Why: 现在部署入口是 workflow，不再是分支直发。
 
-2. 打开仓库 `Actions`，看是否有 Pages 相关 workflow 成功。  
+2. 打开仓库 `Actions`，看 `Deploy Notes Site` 是否成功。  
 Why: Pages 发布是异步的，通常要 1-3 分钟，失败会在这里给错误日志。
 
 3. 访问：`https://<你的用户名>.github.io/<仓库名>/`  
