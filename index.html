@@ -338,9 +338,22 @@
       searchEl.addEventListener("input", applyFilter);
 
       async function init() {
+        if (window.location.protocol === "file:") {
+          metaEl.textContent = "本地 file:// 模式";
+          treeEl.innerHTML =
+            '<div class="empty">你是直接双击打开 index.html。浏览器在 file:// 下会拦截 fetch 本地文件，这不是 manifest 缺失。<br/><br/>请改用本地静态服务器：<br/>1) 终端进入项目目录<br/>2) 执行 <code>python3 -m http.server 8000</code><br/>3) 打开 <code>http://localhost:8000</code></div>';
+          contentEl.textContent =
+            "file:// 模式无法读取 manifest.json 与代码文件，请按左侧步骤用 http://localhost 访问。";
+          return;
+        }
+
         try {
           const res = await fetch("manifest.json");
-          if (!res.ok) throw new Error("缺少 manifest.json");
+          if (!res.ok) {
+            throw new Error(
+              `manifest.json 请求失败（HTTP ${res.status}）。请确认它已提交并推送。`
+            );
+          }
           const data = await res.json();
 
           state.files = data.files || [];
@@ -352,7 +365,8 @@
           else contentEl.textContent = "没有可展示的文件，请先生成 manifest.json";
         } catch (error) {
           metaEl.textContent = "加载失败";
-          treeEl.innerHTML = '<div class="empty">请先执行生成命令：node scripts/generate-manifest.mjs</div>';
+          treeEl.innerHTML =
+            '<div class="empty">初始化失败。<br/>如果你刚新增文件，请执行：<code>node scripts/generate-manifest.mjs</code><br/>然后重新提交并推送。<br/><br/>如果你是双击打开本地 html，请改用 http://localhost 访问。</div>';
           contentEl.textContent = `初始化失败: ${error.message}`;
         }
       }
@@ -361,4 +375,3 @@
     </script>
   </body>
 </html>
-

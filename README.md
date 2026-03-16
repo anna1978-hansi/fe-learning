@@ -30,6 +30,11 @@ python3 -m http.server 8000
 
 然后浏览器打开：`http://localhost:8000`
 
+### 为什么不能直接双击 `index.html`？
+
+因为双击是 `file://` 协议，浏览器会拦截页面用 `fetch` 读取本地文件（安全策略）。  
+而我们的页面需要读取 `manifest.json` 和代码文件，所以必须用 `http://` 访问（本地服务器或 GitHub Pages 都是 `http/https`）。
+
 ---
 
 ## 3. 新建 GitHub 仓库并上传
@@ -91,3 +96,27 @@ git push
 - 打开是 404：检查 `Pages` 的分支是否是 `main` + `/ (root)`。  
 - 中文路径打不开：本项目前端已做 URL 编码处理，通常可正常显示。
 
+---
+
+## 7. 推送后如何确认部署成功（推荐按顺序排查）
+
+1. 打开仓库的 `Settings -> Pages`，确认 Source 是 `Deploy from a branch`，分支是 `main`，目录是 `/ (root)`。  
+Why: 这是 GitHub Pages 的发布入口，选错分支/目录就不会发布你现在的代码。
+
+2. 打开仓库 `Actions`，看是否有 Pages 相关 workflow 成功。  
+Why: Pages 发布是异步的，通常要 1-3 分钟，失败会在这里给错误日志。
+
+3. 访问：`https://<你的用户名>.github.io/<仓库名>/`  
+Why: 项目仓库的 Pages URL 一定带仓库名路径。
+
+4. 如果页面旧内容没更新，强制刷新（Mac: `Cmd + Shift + R`）。  
+Why: 浏览器可能缓存旧静态资源。
+
+5. 如果仍不对，再执行一次：
+```bash
+node scripts/generate-manifest.mjs
+git add manifest.json
+git commit -m "refresh manifest"
+git push
+```
+Why: 你新增/改动文件后，`manifest.json` 必须同步更新，否则页面不知道有新文件。
